@@ -1,0 +1,28 @@
+Resources:
+  - .*:
+      Type: "AWS::AutoScaling::AutoScalingGroup"
+      Properties:
+        .*
+      DeletionPolicy: .*
+      UpdateReplacePolicy: .*
+      CreationPolicy: .*
+      DeletionPolicy: .*
+      DependsOn: .*
+      Metadata: .*
+      UpdatePolicy: .*
+      UpdateReplacePolicy: .*
+  - .*:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      Properties:
+        .*
+      DeletionPolicy: .*
+      UpdateReplacePolicy: .*
+      CreationPolicy: .*
+      DeletionPolicy: .*
+      DependsOn: .*
+      Metadata: .*
+      UpdatePolicy: .*
+      UpdateReplacePolicy: .*
+
+Outputs:
+  .*

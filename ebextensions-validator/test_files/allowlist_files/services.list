@@ -1,0 +1,15 @@
+services:
+  sysvinit:
+    .*:
+      enabled: "true"
+      ensureRunning: "true"
+      files: 
+        - "file name"
+      sources: 
+        - directory
+      packages: 
+        name of package manager:
+          # need to escape [ and ] due to regex
+          "package name\\[: version\\]"
+      commands: 
+        - "name of command"

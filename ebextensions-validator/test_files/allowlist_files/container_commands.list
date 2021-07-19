@@ -1,0 +1,17 @@
+# Documentation: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/customize-containers-ec2.html
+
+# container_commands:
+#   name of container_command:
+#     command: "command to run"
+#     leader_only: true
+#   name of container_command:
+#     command: "command to run"
+container_commands:
+  01-setupcron:
+    command: | # Need to escape *
+      echo '\*/5 \* \* \* \* root perl /opt/cloudwatch/aws-scripts-mon/mon-put-instance-data.pl `{"Fn::GetOptionSetting" : { "OptionName" : "CloudWatchMetrics", "DefaultValue" : "--mem-util --disk-space-util --disk-path=/" }}` >> /var/log/cwpump.log 2>&1' > /etc/cron.d/cwpump
+  02-changeperm:
+    command: chmod 644 /etc/cron.d/cwpump
+  03-changeperm:
+    # Need to escape +
+    command: chmod u\+x /opt/cloudwatch/aws-scripts-mon/mon-put-instance-data.pl

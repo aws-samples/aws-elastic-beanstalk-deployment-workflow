@@ -1,0 +1,7 @@
+# from https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/ebextensions-optionsettings.html#ebextensions-optionsettings-snippet
+option_settings:
+  - namespace:  aws:elasticbeanstalk:container:tomcat:jvmoptions
+    option_name:  Xmx
+    value:  "[0-9]*m"
+  - option_name: MYPARAMETER
+    value: parametervalue

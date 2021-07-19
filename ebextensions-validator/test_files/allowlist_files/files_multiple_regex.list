@@ -1,0 +1,33 @@
+# files:  
+#   "target file location on disk": 
+#      mode: "six-digit octal value"
+#      owner: name of owning user for file
+#      group: name of owning group for file
+#      source: URL
+#      authentication: authentication name:
+
+#   "target file location on disk": 
+#      mode: "six-digit octal value"
+#      owner: name of owning user for file
+#      group: name of owning group for file
+#      content: |
+#       # this is my
+#       # file content
+#      encoding: encoding format
+#      authentication: authentication name:
+files:
+  - .*:
+      mode: "000755"
+      owner: root
+      group: root
+      source: http://foo.bar/myfile
+  - .*:
+      mode: "000755"
+      owner: root
+      group: root
+      content: |
+        this is my
+        file content
+  - .*:
+      mode: "120400"
+      content: "/home/ec2-user/myfile2"

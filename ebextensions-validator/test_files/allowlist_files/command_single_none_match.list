@@ -1,0 +1,13 @@
+# Documentation: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/customize-containers-ec2.html
+# commands:
+#   command name: 
+#     command: command to run
+#     cwd: working directory
+#     env: 
+#       variable name: variable value
+#     test: conditions for command 
+#     ignoreErrors: true
+commands:
+  command1:
+    command: NO_MATCH
+    cwd: NO_MATCH

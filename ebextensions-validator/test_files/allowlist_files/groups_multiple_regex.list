@@ -1,0 +1,8 @@
+# groups:
+#   name of group: {}
+#   name of group:
+#     gid: "group id"
+groups:
+  - .*: {}
+  - .*:
+      gid: "45"

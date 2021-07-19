@@ -1,0 +1,123 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: S3 bucket for storing the allowlists used by ebextensions-validator
+
+Parameters:
+  GlobalAllowlistBucketPrefix:
+    Type: String
+    Description: Bucket name prefix for ebextensions validator allowlist bucket
+    Default: "cf-ebextensions-validator-allowlist"
+  GlobalAllowlistFolderName:
+    Type: String
+    Default: "global"
+    Description: Folder name of the global ebextensions validator allowlist
+
+Resources:
+  s3bucketEbextensValidator:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain 
+    UpdateReplacePolicy: Retain 
+    Properties:
+      BucketName: !Sub ${GlobalAllowlistBucketPrefix}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration: 
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: GlobalAllowlistFolderName
+          Value: !Ref GlobalAllowlistFolderName
+
+  s3bucketEbextensValidatorBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref 's3bucketEbextensValidator'
+      PolicyDocument:
+        Statement:
+          - Sid: AllowFullS3OnEbextensionsBucketFiles
+            Effect: Deny
+            Action:
+              - "s3:PutObject*"
+              - "s3:DeleteObject*"
+            Principal: "*"
+            Condition:
+              ArnNotLike:
+                aws:PrincipalArn:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                  - !GetAtt 'ebextensionsValidatorInitializationLambdaRole.Arn'
+            Resource: 
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref 's3bucketEbextensValidator'
+                  - /*
+              - !Join
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref 's3bucketEbextensValidator'
+
+  ebextensionsValidatorInitializationLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'CF-ebex-val-al-init-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  s3bucketEbextensValidatorIAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties: 
+      PolicyName: !Sub 'ebextensions-validator-policy'
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:List*"
+              - "s3:Get*"
+              - "s3:PutObject*"
+              - "s3:DeleteObject*"
+            Resource:
+              - !Sub '${s3bucketEbextensValidator.Arn}/*'
+              - !Sub '${s3bucketEbextensValidator.Arn}'
+      Roles: 
+        - !Ref ebextensionsValidatorInitializationLambdaRole
+
+  ebextensionsValidatorInitializeAllowlist:
+    Type: 'Custom::EbextensionsValidatorAllowlistInitialization'
+    DependsOn:
+      - s3bucketEbextensValidatorBucketPolicy
+      - s3bucketEbextensValidatorIAMPolicy
+    Properties:
+      ServiceToken: !GetAtt ebextensionsValidatorInitializeAllowlistLambda.Arn
+
+  ebextensionsValidatorInitializeAllowlistLambda:
+    # This Lambda function creates the initial set of whitelist files and buckets in the ebextensions-validator-allowlist bucket
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub CF-ebex-val-al-init
+      Role: !GetAtt ebextensionsValidatorInitializationLambdaRole.Arn
+      CodeUri: ebextensionsValidatorInitialization
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          EbextensionsValidatorS3BucketName: !Ref s3bucketEbextensValidator
+          GlobalAllowlistFolderName: !Ref GlobalAllowlistFolderName

@@ -1,0 +1,9 @@
+packages: 
+  rpm:
+    epel: http://download.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
+  rubygems_NO_MATCH: 
+    chef: '0.10.2'
+  yum:
+    libmemcached: [] 
+    gcc: []
+    ruby-devel: []

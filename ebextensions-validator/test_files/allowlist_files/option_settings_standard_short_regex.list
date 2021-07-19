@@ -1,0 +1,5 @@
+# from https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/ebextensions-optionsettings.html#ebextensions-optionsettings-snippet
+option_settings:
+  - namespace:  aws:.*:container:tomcat:jvmoptions
+    option_name:  Xmx
+    value:  256m

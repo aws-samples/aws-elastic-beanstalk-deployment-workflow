@@ -1,0 +1,16 @@
+Resources:
+  # Allow any resource attributes
+  - .*:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        .*
+  - AWSEBAutoScalingGroup:
+      Type: "AWS::AutoScaling::AutoScalingGroup"
+  - AWSEBV2LoadBalancer:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      DeletionPolicy: .*
+      UpdateReplacePolicy: .*
+Outputs:
+  LoadBalancerArn:
+    Value: { "Ref" : "AWSEBV2LoadBalancer" }
+    Description: The Arn of the Load Balancer

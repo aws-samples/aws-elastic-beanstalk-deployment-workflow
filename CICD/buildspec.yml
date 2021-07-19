@@ -1,0 +1,35 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+    commands:
+      - pip install -r ebextensions-validator/requirements.txt
+      - pip install pytest
+      - pip install ./ebextensions-validator -t sc-elasticbeanstalk/application_deployment/ebextensions_validator
+      - ROOT=$(pwd)
+      - ACCOUNT_ID=$(aws sts get-caller-identity | jq -r ".Account")
+  pre_build:
+    commands:
+      - cd ebextensions-validator; pytest; cd $ROOT
+      - cd sc-elasticbeanstalk/application_deployment; pytest; cd $ROOT
+  build:
+    commands:
+      - cd sc-elasticbeanstalk
+      - sh update_solution_stack_list.sh sc-elasticbeanstalk-ra.yaml > sc-elasticbeanstalk-ra_UPDATED.yaml
+      - sam package --template-file sc-elasticbeanstalk-ra_UPDATED.yaml --output-template-file ../out-sc-elasticbeanstalk-ra.yaml --s3-bucket $ARTIFACT_BUCKET_NAME
+      - cd $ROOT
+
+      - cd allowlist-bucket
+      - sam package --template-file allowlist-bucket.yaml --output-template-file ../out-allowlist-bucket.yaml --s3-bucket $ARTIFACT_BUCKET_NAME
+      - cd $ROOT
+
+      - aws s3 cp out-sc-elasticbeanstalk-ra.yaml s3://$ARTIFACT_BUCKET_NAME
+      - aws s3 cp out-allowlist-bucket.yaml s3://$ARTIFACT_BUCKET_NAME/allowlist-bucket.yaml
+      - aws cloudformation package --template-file sc-product-elasticbeanstalk.yaml --output-template-file out-sc-product-elasticbeanstalk.yaml --s3-bucket $ARTIFACT_BUCKET_NAME
+      - aws s3 cp out-sc-product-elasticbeanstalk.yaml s3://$ARTIFACT_BUCKET_NAME/sc-product-elasticbeanstalk.yaml
+      - aws s3 cp sc-portfolio-elasticbeanstalk.yaml s3://$ARTIFACT_BUCKET_NAME/sc-portfolio-elasticbeanstalk.yaml
+  post_build:
+    commands:
+      - aws cloudformation deploy --template-file sc-portfolio-elasticbeanstalk.yaml --stack-name $STACKNAME --parameter-overrides RepoRootURL=https://s3-eu-central-1.amazonaws.com/$ARTIFACT_BUCKET_NAME/ AllowRoleArn="arn:aws:iam::$ACCOUNT_ID:root" --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_IAM CAPABILITY_NAMED_IAM

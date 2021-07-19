@@ -1,0 +1,35 @@
+# Finde more information on the individual fields in the AWS documentation: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/ebextensions.html
+option_settings:
+# modify the Elastic Beanstalk configuration 
+  .*
+packages:
+# download and install prepackaged applications and components
+  .*
+groups:
+# create Linux/UNIX groups and to assign group IDs
+  .*
+users:
+# create Linux/UNIX users on the EC2 instance
+  .*
+sources:
+# download an archive file from a public URL and unpack it in a target directory on the EC2 instance
+  .*
+files:
+# create files on the EC2 instance
+  .*
+commands:
+# execute commands on the EC2 instance
+  .*
+services:
+# define which services should be started or stopped when the instance is launched
+  sysvinit:
+    .*
+container_commands:
+# execute commands that affect your application source code
+  .*
+Resources:
+# deploy AWS Resources as part of Elastic Beanstalk environment
+  .*
+Outputs:
+# define outputs of deployed AWS Resources
+  .*

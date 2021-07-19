@@ -1,0 +1,20 @@
+# Documentation: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/customize-containers-ec2.html
+
+# users:
+#   name of user:
+#     groups:
+#       - name of group
+#     uid: "id of the user"
+#     homeDir: "user's home directory"
+users:
+  - .*:
+      groups:
+        - group1
+        - group2
+      uid: "50"
+      homeDir: "/tmp"
+  - .*:
+      groups:
+        - group3
+        - group4
+      uid: "51"

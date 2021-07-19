@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Elastic Beanstalk Portfolio for Service Catalog. (fdp-1qj64b36k)
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Portfolio Information
+        Parameters:
+          - PortfolioName
+          - PortfolioProvider
+          - PortfolioDescription
+      - Label:
+          default: IAM Settings
+        Parameters:
+          - LaunchRoleName
+          - LinkedUser
+          - LinkedRole
+      - Label:
+          default: Product Settings
+        Parameters:
+          - RepoRootURL
+Parameters:
+  PortfolioProvider:
+    Type: String
+    Description: Provider Name
+    Default: IT Services
+  PortfolioName:
+    Type: String
+    Description: Portfolio Name
+    Default: Service Catalog - AWS Elastic Beanstalk with ebextensions validator
+  PortfolioDescription:
+    Type: String
+    Description: Portfolio Description
+    Default: Service Catalog Portfolio that contains reference architecture products
+      for AWS Elastic Beanstalk.
+  LaunchRoleName:
+    Type: String
+    Description: Name of the launch constraint role for Elastic Beanstalk products.
+      leave this blank to create the role.
+    Default: LaunchConstRole
+  LinkedUser:
+    Type: String
+    Description: (Optional) The name of a user which can execute products in this
+      portfolio.
+    Default: ""
+  LinkedRole:
+    Type: String
+    Description: (Optional) The name of a second role which can execute products in
+      this portfolio.
+    Default: ""
+  RepoRootURL:
+    Type: String
+    Description: Root url for the repo containing the product templates.
+    Default: https://s3.amazonaws.com/public-artifacts-eu-central-1-907413805921/
+  GlobalAllowlistFolderName:
+    Type: String
+    Default: "global"
+    Description: Folder name of the global ebextensions validator allowlist
+  GlobalAllowlistBucketPrefix:
+    Type: String
+    Description: Bucket name prefix for ebextensions validator allowlist bucket
+    Default: "cf-ebextensions-validator-allowlist"
+Conditions:
+  # CreateLaunchConstraint: !Equals
+  #   - !Ref 'LaunchRoleName'
+  #   - ''
+  CondLinkUser: !Not
+    - !Equals
+      - !Ref 'LinkedUser'
+      - ''
+  CondLinkRole: !Not
+    - !Equals
+      - !Ref 'LinkedRole'
+      - ''
+Resources:
+  SCElasticBeanstalkportfolio:
+    Type: AWS::ServiceCatalog::Portfolio
+    Properties:
+      ProviderName: !Ref 'PortfolioProvider'
+      Description: !Ref 'PortfolioDescription'
+      DisplayName: !Ref 'PortfolioName'
+  adduser:
+    Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
+    Condition: CondLinkUser
+    Properties:
+      PrincipalARN: !Sub 'arn:aws:iam::${AWS::AccountId}:user/${LinkedUser}'
+      PortfolioId: !Ref 'SCElasticBeanstalkportfolio'
+      PrincipalType: IAM
+  addrole:
+    Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
+    Condition: CondLinkRole
+    Properties:
+      PrincipalARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/${LinkedRole}'
+      PortfolioId: !Ref 'SCElasticBeanstalkportfolio'
+      PrincipalType: IAM
+
+  BeanstalkLaunchRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'CF-${LaunchRoleName}'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess-AWSElasticBeanstalk
+        - arn:aws:iam::aws:policy/AWSCodeDeployFullAccess
+        - arn:aws:iam::aws:policy/AWSCodePipelineFullAccess
+        - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess
+        - arn:aws:iam::aws:policy/AWSCodeBuildAdminAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+        - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - servicecatalog.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: BeanstalkLaunchPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: BeanstalkolicySID
+                Effect: Allow
+                Action:
+                  - "servicecatalog:*"
+                  - "iam:ListRolePolicies"
+                  - "iam:ListPolicies"
+                  - "iam:CreateRole"
+                  - "iam:CreateServiceLinkedRole"
+                  - "iam:DeleteRole"
+                  - "iam:GetRole"
+                  - "iam:PassRole"
+                  - "iam:ListRoles"
+                  - "iam:GetRolePolicy"
+                  - "iam:PutRolePolicy"
+                  - "iam:DeleteRolePolicy"
+                  - "iam:CreateInstanceProfile"
+                  - "iam:DeleteInstanceProfile"
+                  - "iam:AddRoleToInstanceProfile"
+                  - "iam:RemoveRoleFromInstanceProfile"
+                  - "iam:DetachRolePolicy"
+                  - "iam:AttachRolePolicy"                                 
+                  - "iam:UpdateAssumeRolePolicyDocument"
+                  - "cloudformation:DescribeStackResource"
+                  - "cloudformation:DescribeStackResources"
+                  - "cloudformation:GetTemplate"
+                  - "cloudformation:List*"
+                  - "cloudformation:DescribeStackEvents"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:DescribeStackEvents"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:GetTemplateSummary"
+                  - "cloudformation:SetStackPolicy"
+                  - "cloudformation:ValidateTemplate"
+                  - "cloudformation:UpdateStack"     
+                Resource: '*'
+  beanstalkproduct:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        PortfolioProvider: !Ref 'PortfolioProvider'
+        LaunchConstraintRole: !Ref 'BeanstalkLaunchRole'
+        # !If
+        #   - CreateLaunchConstraint
+        #   - !GetAtt 'LaunchConstraintRole.Outputs.LaunchRoleName'
+        #   - !Sub '${LaunchRoleName}'
+        PortfolioId: !Ref 'SCElasticBeanstalkportfolio'
+        RepoRootURL: !Ref 'RepoRootURL'
+        GlobalAllowlistFolderName: !Ref 'GlobalAllowlistFolderName'
+        GlobalAllowlistBucketPrefix: !Ref 'GlobalAllowlistBucketPrefix'
+      TemplateURL: !Sub ${RepoRootURL}sc-product-elasticbeanstalk.yaml
+      TimeoutInMinutes: 5

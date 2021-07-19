@@ -1,0 +1,9 @@
+packages: 
+  yum:
+    libmem.*: [] 
+    ruby-devel: []
+    gcc: []
+  rp.+:
+    epel: http://download.fedoraproject.org/.*
+  ruby.*$: 
+    chef: '0.10.2'

@@ -1,0 +1,179 @@
+{
+    "Comment": "Update Application Code",
+    "StartAt": "CheckEnvironmentStatusInit",
+
+    "States": {
+
+        "CheckEnvironmentStatusInit": {
+            "Type": "Task",
+            "TimeoutSeconds": 300,
+            "Resource": "arn:aws:states:::lambda:invoke",
+
+            "InputPath": "$",
+            "ResultPath": "$.ExecutionData",
+            "OutputPath": "$",
+
+            "Parameters": {  
+            "FunctionName": "${CheckEnvironmentStatus}",
+            "Payload.$": "$"
+            },
+            "Next": "EnvironmentIsReady"
+        },
+        "EnvironmentIsReady": {
+            "Type": "Choice",
+            "Choices": [
+            {
+                "Variable": "$.ExecutionData.Payload.body",
+                "StringEquals": "Ready",
+                "Next": "EbextensionsValidator"
+            }
+            ],
+            "Default": "PipelineFail"
+        },
+
+        "EbextensionsValidator": {
+            "Type": "Task",
+            "TimeoutSeconds": 300,
+            "Resource": "arn:aws:states:::lambda:invoke",
+
+            "InputPath": "$",
+            "ResultPath": "$.ExecutionData",
+            "OutputPath": "$",
+
+            "Parameters": {  
+            "FunctionName": "${EbextensionsValidator}",
+            "Payload.$": "$"
+            },
+            "Next": "EbextensionsValid"
+        },
+        "EbextensionsValid": {
+            "Type": "Choice",
+            "Choices": [
+            {
+                "Variable": "$.ExecutionData.Payload.body",
+                "StringEquals": "Valid",
+                "Next": "CreateApplicationVersion"
+            }
+            ],
+            "Default": "PipelineFail"
+        },
+
+        "CreateApplicationVersion": {
+            "Type": "Task",
+            "TimeoutSeconds": 300,
+            "Resource": "arn:aws:states:::lambda:invoke",
+
+            "InputPath": "$",
+            "ResultPath": "$.ExecutionDataCreateApplicationVersion",
+            "OutputPath": "$",
+
+            "Parameters": {  
+            "FunctionName": "${CreateApplicationVersion}",
+            "Payload": {
+              "S3Bucket.$": "$.S3Bucket",
+              "S3Key.$": "$.S3Key"
+              }
+            },
+            "Next": "WaitUntilAppVersionCreationIsDone"
+        },
+        "WaitUntilAppVersionCreationIsDone": {
+            "Type": "Task",
+            "TimeoutSeconds": 300,
+            "Resource": "arn:aws:states:::lambda:invoke",
+
+            "InputPath": "$",
+            "ResultPath": "$.ExecutionData",
+            "OutputPath": "$",
+
+            "Parameters": {  
+            "FunctionName": "${CheckApplicationVersionStatus}",
+            "Payload": {
+              "VersionLabel.$": "$.ExecutionDataCreateApplicationVersion.Payload.VersionLabel"
+              }
+            },
+            "Next": "CheckStatusApp"
+        },
+        "CheckStatusApp": {
+            "Type": "Choice",
+            "Choices": [
+            {
+                "Variable": "$.ExecutionData.Payload.status",
+                "StringEquals": "PROCESSING",
+                "Next": "wait_five_seconds_app"
+            },
+            {
+                "Variable": "$.ExecutionData.Payload.status",
+                "StringEquals": "PROCESSED",
+                "Next": "UpdateEnvironment"
+            }
+            ],
+            "Default": "PipelineFail"
+        },
+        "wait_five_seconds_app": {
+            "Type": "Wait",
+            "Seconds": 5,
+            "Next": "WaitUntilAppVersionCreationIsDone"
+        },
+        "UpdateEnvironment": {
+            "Type": "Task",
+            "TimeoutSeconds": 300,
+            "Resource": "arn:aws:states:::lambda:invoke",
+
+            "InputPath": "$",
+            "ResultPath": "$.ExecutionData",
+            "OutputPath": "$",
+
+            "Parameters": {  
+            "FunctionName": "${UpdateEnvironment}",
+            "Payload": {
+              "VersionLabel.$": "$.ExecutionDataCreateApplicationVersion.Payload.VersionLabel",
+              "DeploymentPolicy.$": "$.DeploymentPolicy"
+              }
+            },
+            "Next": "WaitUntilUpdateDone"
+        },
+        "WaitUntilUpdateDone": {
+            "Type": "Task",
+            "TimeoutSeconds": 300,
+            "Resource": "arn:aws:states:::lambda:invoke",
+
+            "InputPath": "$",
+            "ResultPath": "$.ExecutionData",
+            "OutputPath": "$",
+
+            "Parameters": {  
+            "FunctionName": "${CheckEnvironmentStatus}",
+            "Payload.$": "$"
+            },
+            "Next": "CheckStatusEnvironment"
+        },
+        "CheckStatusEnvironment": {
+            "Type": "Choice",
+            "Choices": [
+            {
+                "Variable": "$.ExecutionData.Payload.body",
+                "StringEquals": "Updating",
+                "Next": "wait_five_seconds"
+            },
+            {
+                "Variable": "$.ExecutionData.Payload.body",
+                "StringEquals": "Ready",
+                "Next": "PipelineSucceed"
+            }
+            ],
+            "Default": "PipelineFail"
+        },
+        "wait_five_seconds": {
+            "Type": "Wait",
+            "Seconds": 5,
+            "Next": "WaitUntilUpdateDone"
+        },
+
+        "PipelineFail": {
+            "Type": "Fail"
+        },    
+        "PipelineSucceed": {
+            "Type": "Succeed"
+        }
+    }
+}

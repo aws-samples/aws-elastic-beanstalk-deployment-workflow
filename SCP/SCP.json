@@ -1,0 +1,133 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "iam",
+      "Effect": "Deny",
+      "Action": [
+        "iam:Create*",
+        "iam:Put*",
+        "iam:Delete*",
+        "iam:Update*",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/SC-*",
+        "arn:aws:iam::*:role/CF-*"
+      ],
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/CF-LaunchConstRole",
+            "arn:aws:iam::*:*/SC-*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "lambda",
+      "Effect": "Deny",
+      "Action": [
+        "lambda:Add*",
+        "lambda:Create*",
+        "lambda:Delete*",
+        "lambda:InvokeFunction",
+        "lambda:Publish*",
+        "lambda:Put*",
+        "lambda:Remove*",
+        "lambda:TagResource",
+        "lambda:UntagResource",
+        "lambda:Update*"
+      ],
+      "Resource": [
+        "arn:aws:lambda:*:*:function:CF-*",
+        "arn:aws:lambda:*:*:function:SC-*",
+        "arn:aws:lambda:*:*:layer:SC-*"
+      ],
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/CF-LaunchConstRole",
+            "arn:aws:iam::*:*/SC-*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "stepfunctions",
+      "Effect": "Deny",
+      "Action": [
+        "states:Create*",
+        "states:Delete*",
+        "states:TagResource",
+        "states:UntagResource",
+        "states:Update*"
+      ],
+      "Resource": [
+        "arn:aws:states:*:*:stateMachine:SC-*"
+      ],
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/CF-LaunchConstRole",
+            "arn:aws:iam::*:*/SC-*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "beanstalk",
+      "Effect": "Deny",
+      "Action": [
+        "elasticbeanstalk:AbortEnvironmentUpdate",
+        "elasticbeanstalk:AddTags",
+        "elasticbeanstalk:ApplyEnvironmentManagedAction",
+        "elasticbeanstalk:AssociateEnvironmentOperationsRole",
+        "elasticbeanstalk:ComposeEnvironments",
+        "elasticbeanstalk:Create*",
+        "elasticbeanstalk:Delete*",
+        "elasticbeanstalk:DisassociateEnvironmentOperationsRole",
+        "elasticbeanstalk:PutInstanceStatistics",
+        "elasticbeanstalk:RebuildEnvironment",
+        "elasticbeanstalk:RemoveTags",
+        "elasticbeanstalk:TerminateEnvironment",
+        "elasticbeanstalk:Update*"
+      ],
+      "Resource": [
+        "arn:aws:elasticbeanstalk:*:*:*"
+      ],
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/CF-LaunchConstRole",
+            "arn:aws:iam::*:*/SC-*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ec2",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:*",
+        "ec2-instance-connect:*"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:*:*"
+      ],
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalArn": [
+            "arn:aws:iam::*:role/CF-LaunchConstRole",
+            "arn:aws:iam::*:*/SC-*"
+          ]
+        },
+        "StringLike": {
+          "aws:ResourceTag/owner": "cf-sc-manager"
+        }
+      }
+    }
+  ]
+}

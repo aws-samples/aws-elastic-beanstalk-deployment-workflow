@@ -1,0 +1,203 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: StateMachine to update Application in ElasticBeanstalk
+
+Parameters:
+  ApplicationName:
+    Type: String
+  EnvironmentName:
+    Type: String
+  StackName:
+    Type: String
+  GlobalAllowlistBucket:
+    Type: String
+  GlobalAllowlistFolderName:
+    Type: String
+  RemainingApplicationVersions:
+    Type: String
+    Default: "10"
+
+Resources:
+
+  # Api:
+  #   Type: AWS::Serverless::Api
+  #   Properties:
+  #     DefinitionBody:
+  #       Fn::Transform:
+  #         Name: AWS::Include
+  #         Parameters:
+  #            Location: !Sub "${SwaggerDirectory}/${SwaggerFilename}"
+  #     StageName: deployed
+  #     EndpointConfiguration: PRIVATE
+  #     Name: !Sub "${Environment}-${Application}-Private"
+
+
+  ApplicationDeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # RoleName: !Sub SC-${ApplicationName}-${EnvironmentName}-AppDepRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess-AWSElasticBeanstalk
+        - arn:aws:iam::aws:policy/AWSServiceCatalogEndUserReadOnlyAccess
+
+  EbextensionsValidator:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      FunctionName: !Sub SC-${ApplicationName}-${EnvironmentName}-EbextensionsValidator
+      Role: !GetAtt ApplicationDeploymentRole.Arn
+      CodeUri: ebextensions_validator
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          EnvironmentName: !Ref EnvironmentName
+          ApplicationName: !Ref ApplicationName
+          ProvisionedProductId: !Join
+            - "-"
+            - - !Select [2, !Split ["-", !Ref StackName]]
+              - !Select [3, !Split ["-", !Ref StackName]]
+          GlobalAllowlistBucket: !Ref GlobalAllowlistBucket
+          GlobalAllowlistFolderName: !Ref GlobalAllowlistFolderName
+
+  CreateApplicationVersion:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      FunctionName: !Sub SC-${ApplicationName}-${EnvironmentName}-CreateApplicationVersion
+      Role: !GetAtt ApplicationDeploymentRole.Arn
+      CodeUri: create_application_version
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          EnvironmentName: !Ref EnvironmentName
+          ApplicationName: !Ref ApplicationName
+          RemainingApplicationVersions: !Ref RemainingApplicationVersions
+
+  CheckApplicationVersionStatus:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      FunctionName: !Sub SC-${ApplicationName}-${EnvironmentName}-CheckApplicationVersionStatus
+      Role: !GetAtt ApplicationDeploymentRole.Arn
+      CodeUri: check_application_version_status
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          EnvironmentName: !Ref EnvironmentName
+          ApplicationName: !Ref ApplicationName
+
+  CheckEnvironmentStatus:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      FunctionName: !Sub SC-${ApplicationName}-${EnvironmentName}-CheckEnvironmentStatus
+      Role: !GetAtt ApplicationDeploymentRole.Arn
+      CodeUri: check_environment_status
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          EnvironmentName: !Ref EnvironmentName
+          ApplicationName: !Ref ApplicationName
+
+  UpdateEnvironment:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      FunctionName: !Sub SC-${ApplicationName}-${EnvironmentName}-UpdateEnvironment
+      Role: !GetAtt ApplicationDeploymentRole.Arn
+      CodeUri: update_environment
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 300
+      Environment:
+        Variables:
+          EnvironmentName: !Ref EnvironmentName
+          ApplicationName: !Ref ApplicationName
+
+  ApplicationCodeUpdateStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # RoleName: !Sub SC-${ApplicationName}-${EnvironmentName}-CodeUpdateStateMachineRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            # Condition:
+            #   ArnEquals:
+            #     aws:PrincipalArn:
+            #       !Sub arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:SC-${ApplicationName}-${EnvironmentName}-ApplicationCodeUpdateStateMachine
+        Version: "2012-10-17"
+      Policies:
+        - PolicyName: InvokeLambdaPolicyForStateMachines
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: InvokeLambdas
+                Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                  - "lambda:Get*"
+                  - "lambda:List*"
+                  - "xray:PutTraceSegments"
+                  - "xray:PutTelemetryRecords"
+                  - "xray:GetSamplingRules"
+                  - "xray:GetSamplingTargets"
+                Resource: '*'
+
+  ApplicationCodeUpdateStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Role: !GetAtt ApplicationCodeUpdateStateMachineRole.Arn
+      Name: !Sub SC-${ApplicationName}-${EnvironmentName}-ApplicationCodeUpdateStateMachine
+      DefinitionUri: ./stateMachine.json
+      DefinitionSubstitutions:
+        CheckEnvironmentStatus: !GetAtt CheckEnvironmentStatus.Arn
+        EbextensionsValidator: !GetAtt EbextensionsValidator.Arn
+        CreateApplicationVersion: !GetAtt CreateApplicationVersion.Arn
+        CheckApplicationVersionStatus: !GetAtt CheckApplicationVersionStatus.Arn
+        UpdateEnvironment: !GetAtt UpdateEnvironment.Arn
+
+  # OrgApiCreateInvokePermission:
+  #   DependsOn: OrgApiCreate
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !GetAtt OrgApiCreate.Arn
+  #     Action: lambda:InvokeFunction
+  #     Principal: apigateway.amazonaws.com
+  #     SourceArn:
+  #       Fn::Sub: 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${Api}/*/POST/api/remote/organisations'
+      
+Outputs:
+  ApplicationDeploymentStateMachineArn:
+    Description: ARN of ApplicationDeployment StateMachine
+    Value: !Ref ApplicationCodeUpdateStateMachine
+  # OrgApiCreateArn:
+  #   Description: OrgApiCreate lambda Arn
+  #   Value: !GetAtt OrgApiCreate.Arn
+  # ApiId:
+  #   Description: ID of the created Api Gateway
+  #   Value:
+  #     !Ref Api
