@@ -81,7 +81,7 @@ The User is not supposed to interact directly with the Elastic Beanstalk environ
 The User’s role is usually fullfilled by developers of an application or product team.
 
 # Install
-Launch the Elastic Beanstalk portfolio stack in th eu-central-1 region:  
+Launch the Elastic Beanstalk portfolio stack in the `eu-central-1` region:  
 
 [![CreateStack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=SC-Beanstalk-with-ebextensions-validator&templateURL=https://public-artifacts-eu-central-1-907413805921.s3.amazonaws.com/sc-portfolio-elasticbeanstalk.yaml)
 
