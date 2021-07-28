@@ -40,7 +40,7 @@ Per default, there is no `allow.list` in the S3 bucket, which means that any dep
 For more information how to use the Ebextensions-Validator, see in [docs#Regulator](../docs#regulator).  
 
 As a starting point, some example files are created in the S3 bucket:
-![S3 Bucket without allow.list](img/Usage_s3_init.png)
+![S3 Bucket without allow.list](../img/Usage_s3_init.png)
 
 ### allow_all.list
 This allowlist allows any valid `.ebextensions` configuration or `.env` file:
