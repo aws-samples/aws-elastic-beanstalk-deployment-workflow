@@ -18,7 +18,7 @@ This page explains how the three roles, Administrator, Regulator and User, are s
 
 
 
-![Architecture](img/Beanstalk-sc-Architecture.png)
+![Architecture](../img/Beanstalk-sc-Architecture.png)
 
 ## Administrator
 
@@ -118,13 +118,13 @@ This walkthrough shows how the User can provision an Elastic Beanstalk environme
 ### Provision Elastic Beanstalk environment via Service Catalog
 
 After the Administrator added the User to the Service Catalog Portfolio, the User can go to Service Catalog Products and choose the provided Elastic Beanstalk product:
-![Service Catalog Product](img/Usage_choose_product.png)
+![Service Catalog Product](../img/Usage_choose_product.png)
 
 After clicking the "Launch product" button, the User can specify several parameters in the product. A detailed description about all of the parameters can be found in [sc-elasticbeanstalk](../sc-elasticbeanstalk). It is important to set the following parameters: `Provisioned product name`, `ApplicationName`, `VPCId`, `EC2SubnetIds` and `ELBSubnetIds`. Make sure that the VPC and Subnets meet the requirements for Elastic Beanstalk: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/vpc.html. See the following screenshot as an example:
-![Product configuration](img/Usage_configure_product.png)
+![Product configuration](../img/Usage_configure_product.png)
 
 If the deployment is successfull, the Status should change to `Available` as seen below. The CloudFormation stack can be inspected for more details about the deployment.
-![Product provisioned](img/Usage_product_provisioned.png)
+![Product provisioned](../img/Usage_product_provisioned.png)
 
 At this point, Elastic Beanstalk is deployed with the sample application. You can go to the Elastic Beanstalk environment and inspect its status and open the application if you want.
 
@@ -149,59 +149,59 @@ We will need both files for the deployments later.
 ### Deploy new application version via Step Functions state machine - first try
 
 To upload the new application version stored in S3 to the Elastic Beanstalk environment, the AWS Step Functions state machine, which is deployed together with the Elastic Beanstalk environment, is used. Go to AWS Step Functions and chose the state machine. You find it by searching for the `ApplicationName` specified in the Service Catalog product parameters:  
-![State machine](img/Usage_state_machine.png)
+![State machine](../img/Usage_state_machine.png)
 
 To start the deployment of the new application version, enter the state machine and click the "Start execution" button. Next, the User needs to enter the correct parameters as described in [Deploying applications via the Step Function](#deploying-applications-via-the-step-function). We first deploy the `php_app_no_ebextensions.zip` file:  
-![First execution parameters](img/Usage_first_execution_parameters.png)
+![First execution parameters](../img/Usage_first_execution_parameters.png)
 
 As seen below, the execution fails with an `ClientError`:  
-![First execution fails](img/Usage_first_execution_client_error.png)
+![First execution fails](../img/Usage_first_execution_client_error.png)
 
 The reason for that is, that the `ebextensions-validator` function cannot find an `allow.list` file. This can be seen in the CloudWatch logs of the Lambda function below. The `allow.list` file could not be found:  
-![First execution logs](img/Usage_first_execution_lambda_logs.png)
+![First execution logs](../img/Usage_first_execution_lambda_logs.png)
 
 To fix this, we need the help of the Regulator.
 
 ### Setup allowlist in ebextenssions-validator-allowlist bucket
 
 The Regulator goes to the S3 bucket, deployed by the solution. Per default, the name is `cf-ebextensions-validator-allowlist-<accountid>`. There is a directory called `global`. As seen below, this directory contains two files, none of them is called `allow.list`:  
-![S3 Bucket without allow.list](img/Usage_s3_init.png)
+![S3 Bucket without allow.list](../img/Usage_s3_init.png)
 
 Let's first rename the `empty.list` to `allow.list`:  
-![S3 Bucket empty allow.list](img/Usage_s3_empty_allow_list.png)
+![S3 Bucket empty allow.list](../img/Usage_s3_empty_allow_list.png)
 
 According to [ebextensions-validator#empty-file](../ebextensions-validator#empty-file), this file should block any `.ebextensions` deployments. This will be tested in the next steps.
 
 ### Deploy new application version via Step Functions state machine - second try
 
 As the User, let's go back to the state machine and trigger it with the very same parameters. This means, we will try to deploy again the `php_app_no_ebextensions` application. As seen below, the deployment is successfull:  
-![Second execution succeeds](img/Usage_second_execution_succeeds.png)
+![Second execution succeeds](../img/Usage_second_execution_succeeds.png)
 
 In the Lambda logs, we can see that since there is no `.ebextensions` folder in the zip file, the `ebextensions-validator` is passed:  
-![Second execution logs](img/Usage_second_execution_lambda_logs.png)
+![Second execution logs](../img/Usage_second_execution_lambda_logs.png)
 
 ### Deploy new application version with .ebextensions - first try
 
 For the next step, let's try to deploy the application including the `.ebextensions` by passing the `php_app_ebextensions.zip` file:  
-![Third execution parameters](img/Usage_third_execution_parameters.png)
+![Third execution parameters](../img/Usage_third_execution_parameters.png)
 
 This execution fails again, as seen below. Note the difference to the failed deployment in the first try, in which the Lambda function raised a `ClientError`, as opposed to this time, when the `ebextensions-validator` step succeeded but identified an invalid deployment.  
-![Third execution fails](img/Usage_third_execution_fails.png)
+![Third execution fails](../img/Usage_third_execution_fails.png)
 
 As seen in the Lambda logs, the key `files` from the `.ebextensions/logging.config` file is missing in the `allow.list` file, because the `allow.list` file is empty. This means, that the `file` section is not allowed in the `.ebextensions`:  
-![Third execution logs](img/Usage_third_execution_lambda_logs.png)
+![Third execution logs](../img/Usage_third_execution_lambda_logs.png)
 
 ### Change allowlist to allow .ebextensions deployment
 
 Now, as the Regulator, let's change the allowlist file to pass the deployment. Therefore, we rename the current `allow.list` file back to `empty.list` and rename `allow_files_in_opt_elasticbeanstalk_tasks_logs.list` to `allow.list`. You could also use the `allow_all.list` instead as described in [allowlist-bucket#usage](allowlist-bucket#usage):  
-![S3 Bucket all allow.list](img/Usage_s3_files_allow_list.png)
+![S3 Bucket all allow.list](../img/Usage_s3_files_allow_list.png)
 
 Find more information on how the validation logic works in [ebextensions-validator#validation-rule](../ebextensions-validator#validation-rule).
 
 ### Deploy new application version with .ebextensions - second try
 
 As the User, let's try the same deployment again. This time, the deployment is successfull:  
-![Fourth execution succeeds](img/Usage_fourth_execution_succeeds.png)
+![Fourth execution succeeds](../img/Usage_fourth_execution_succeeds.png)
 
 In this case, the `.ebextensions/logging.config` file was determined as valid by the `ebextensions-validator` function:  
-![Fourth execution logs](img/Usage_fourth_execution_lambda_logs.png)
+![Fourth execution logs](../img/Usage_fourth_execution_lambda_logs.png)
