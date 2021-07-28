@@ -81,7 +81,7 @@ The User is not supposed to interact directly with the Elastic Beanstalk environ
 The User’s role is usually fullfilled by developers of an application or product team.
 
 # Install
-Launch the Elastic Beanstalk portfolio stack:  
+Launch the Elastic Beanstalk portfolio stack in th eu-central-1 region:  
 
 [![CreateStack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=SC-Beanstalk-with-ebextensions-validator&templateURL=https://public-artifacts-eu-central-1-907413805921.s3.amazonaws.com/sc-portfolio-elasticbeanstalk.yaml)
 
@@ -90,7 +90,7 @@ This cloudformation stack will deploy
 * Service Catalog Portfolio containing following Service Catalog Product
   * [sc-elasticbeanstalk](sc-elasticbeanstalk)
 
-Note: The "Launch Stack" button is not working, since the specified artifact bucket is not public. If you want to run this solution in your own account, use the options described in [CICD](CICD)! TODO - Fix this for public release!
+If you want more flexibility with a CICD deployment, use the options described in [CICD](CICD)!
 
 This process deploys the solution in a single account. If the solution should be distributed across multiple accounts, further infrastructure is needed. [Service Catalog Tools](https://service-catalog-tools-workshop.com/tools.html) could assist in this case.
 
